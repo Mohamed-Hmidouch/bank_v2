@@ -6,37 +6,40 @@ import java.util.UUID;
 
 public class Transaction {
     private UUID id;
-    private UUID accountId;
+    private long accountId; // ✅ Cohérent avec Account.id (long)
     private LocalDateTime dateTransaction;
     private BigDecimal montant;
 
-    public  Transaction(UUID id, UUID accountId, LocalDateTime dateTransaction, BigDecimal montant){
+    public Transaction() {}
+
+    public Transaction(UUID id, long accountId, LocalDateTime dateTransaction, BigDecimal montant){
         this.id = id;
         this.accountId = accountId;
         this.dateTransaction = dateTransaction;
         this.montant = montant;
     }
 
-    public  void setId(UUID id){
+    public void setId(UUID id){
         this.id = id;
     }
 
-    public  void setAccountId(UUID accountId){
+    public void setAccountId(long accountId){
         this.accountId = accountId;
     }
 
-    public  void setDateTransaction(LocalDateTime dateTransaction){
+    public void setDateTransaction(LocalDateTime dateTransaction){
         this.dateTransaction = dateTransaction;
     }
 
-    public  void setMontant(BigDecimal montant){
+    public void setMontant(BigDecimal montant){
         this.montant = montant;
     }
 
-    public  UUID getId(){
+    public UUID getId(){
         return id;
     }
-    public UUID getAccountId() {
+    
+    public long getAccountId() {
         return accountId;
     }
 

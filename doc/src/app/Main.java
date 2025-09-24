@@ -10,6 +10,7 @@ import app.ui.LoginView;
 import app.ui.RegisterView;
 import app.ui.UserDashboard;
 import app.models.User;
+import app.utils.DatabaseConnection;
 
 public class Main {
     public static void main(String[] args) {
@@ -24,9 +25,9 @@ public class Main {
         final AccountService accountService = new AccountService(accountRepository, authRepository);
 
         final AuthMenu authMenu = new AuthMenu();
-        
         boolean running = true;
         while(running){
+            DatabaseConnection.getConnection();
             int choice = authMenu.displayMenu();
             switch(choice){
                 case 1:
