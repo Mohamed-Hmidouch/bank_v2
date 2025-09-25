@@ -14,6 +14,7 @@ public class User {
     private Role role;
     private String email;
     private String password;
+    private boolean loggedIn; // Statut de connexion stocké en base
 
     public User() {}
 
@@ -23,6 +24,7 @@ public class User {
         this.role = role;
         this.email = email;
         this.password = password;
+        this.loggedIn = false; // Par défaut non connecté
     }
 
     public long getId() {
@@ -48,7 +50,9 @@ public class User {
     public void setEmail(String email) {
         this.email = email;
     }
-
+    public void setPassword(String password) {
+        this.password = password;
+    }
     public String getPassword() {
         return password;
     }
@@ -59,5 +63,13 @@ public class User {
 
     public void setRole(Role role) {
         this.role = role;
+    }
+
+    public boolean isLoggedIn() {
+        return loggedIn;
+    }
+
+    public void setLoggedIn(boolean loggedIn) {
+        this.loggedIn = loggedIn;
     }
 }

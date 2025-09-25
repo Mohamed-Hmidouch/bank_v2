@@ -1,19 +1,19 @@
 package app.repositories;
 
 import app.models.User;
-import java.util.List;
 
 
 public interface AuthInterface {
-    
 
-    User findById(String id);
-    
-    void save(User user);
-        
-    void delete(String id);    
+    // SESSION - Récupérer utilisateur connecté par ID 
+    User findById(long id);
 
-    List<User> findAll();
+    // LOGIN - Email + Password pour connexion
+    User findByEmailAndPassword(String email, String password);
 
-    User findByFullName(String fullName);
+    // SESSION - Mise à jour du statut de connexion en base
+    void updateLoggedInStatus(long userId, boolean loggedIn);
+
+    // Vérifie si l'utilisateur est actuellement connecté
+    boolean isUserLoggedIn(long userId);
 }

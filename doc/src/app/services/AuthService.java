@@ -1,79 +1,50 @@
 package app.services;
 
 import app.models.User;
-import app.repositories.AuthInterface;
+import app.repositories.AuthRepository;
+import app.utils.ValidationUtils;
 
 public class AuthService {
-    private AuthInterface authRepository;
 
-    public AuthService(AuthInterface authRepository) {
+    private AuthRepository authRepository;
+
+    public AuthService(AuthRepository authRepository) {
         this.authRepository = authRepository;
     }
 
     public boolean login(String email, String password) {
-        User user = findUserByEmail(email);
-        if (user != null && user.getPassword().equals(password)) {
-            user.setLoggedIn(true);
-            authRepository.save(user);
-            return true;
-        }
-        return false;
-    }
+        if (!ValidationUtils.isNotEmpty(email))
+            throw new IllegalArgumentException(ValidationUtils.ErrorMessages.EMPTY_FIELD);
 
-    public void logout(String userId) {
-        User user = authRepository.findById(userId);
-        if (user != null) {
-            user.setLoggedIn(false);
-            authRepository.save(user);
-        }
-    }
+        if (!ValidationUtils.isValidEmail(email))
+            throw new IllegalArgumentException(ValidationUtils.ErrorMessages.INVALID_EMAIL);
 
-    public boolean isUserLoggedIn(String userId) {
-        User user = authRepository.findById(userId);
-        return user != null && user.isLoggedIn();
-    }
+        if (!ValidationUtils.isValidPassword(password))
+            throw new IllegalArgumentException(ValidationUtils.ErrorMessages.INVALID_PASSWORD);
 
-    private User findUserByEmail(String email) {
-        for (User user : authRepository.findAll()) {
-            if (user.getEmail().equals(email)) {
-                return user;
-            }
-        }
-        return null;
-    }
+        User user = authRepository.findByEmailAndPassword(email, password);
 
-    // Méthode pour créer un nouvel utilisateur (inscription)
-    public boolean register(String fullName, String email, String address, String password) {
-        // Vérifier si l'email existe déjà
-        if (findUserByEmail(email) != null) {
-            return false; // Email déjà utilisé
-        }
-
-        User newUser = new User(
-            java.util.UUID.randomUUID(),
-            fullName,
-            email,
-            address,
-            password,
-            new java.util.ArrayList<>()
-        );
-
-        // Sauvegarder dans le repository
-        authRepository.save(newUser);
+        if (user == null)
+            throw new IllegalArgumentException("Invalide User");
+        authRepository.updateLoggedInStatus(user.getId(), true);
         return true;
     }
 
-    // Méthode pour mettre à jour un utilisateur
-    public void updateUser(User user) {
-        authRepository.save(user);
+    public void logout(long userId) {
+
+        if (!ValidationUtils.isValidUserId(userId))
+            throw new IllegalArgumentException(ValidationUtils.ErrorMessages.USER_ID_INVALID);
+        User user = authRepository.findById(userId);
+        if (user == null)
+            throw new IllegalArgumentException(ValidationUtils.ErrorMessages.USER_NOT_FOUND);
+
+        authRepository.updateLoggedInStatus(userId, false);
     }
 
-    // Méthode pour obtenir l'utilisateur connecté par email
-    public User getLoggedInUserByEmail(String email) {
-        User user = findUserByEmail(email);
-        if (user != null && user.isLoggedIn()) {
-            return user;
+    public boolean isUserLoggedIn(long userId) {
+        if (!ValidationUtils.isValidUserId(userId)) {
+            return false;
         }
-        return null;
+        return authRepository.isUserLoggedIn(userId);
     }
 }
