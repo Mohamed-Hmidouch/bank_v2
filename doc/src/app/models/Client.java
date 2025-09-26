@@ -7,7 +7,6 @@ public class Client {
     private String nom;
     private String prenom;
     private String email;
-    private String adresse;
     private String telephone;
     private List<Account> accounts; // Relation One-to-Many : un client peut avoir plusieurs comptes
     
@@ -33,9 +32,6 @@ public class Client {
     
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
-    
-    public String getAdresse() { return adresse; }
-    public void setAdresse(String adresse) { this.adresse = adresse; }
     
     public String getTelephone() { return telephone; }
     public void setTelephone(String telephone) { this.telephone = telephone; }

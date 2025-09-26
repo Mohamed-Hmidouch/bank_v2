@@ -1,16 +1,16 @@
 package app.ui;
 
-import app.services.AuthService;
+import app.Controllers.AuthController;
 import app.models.User;
 import java.util.Scanner;
 
 public class LoginView {
     private Scanner scanner = new Scanner(System.in);
-    private AuthService authService;
+    private AuthController authController;
     private User loggedInUser = null;
 
-    public LoginView(AuthService authService) {
-        this.authService = authService;
+    public LoginView(AuthController authController) {
+        this.authController = authController;
     }
 
     public boolean showLoginDialog() {
@@ -35,8 +35,9 @@ public class LoginView {
         }
         
         // Tentative de connexion
-        if (authService.login(email, password)) {
-            loggedInUser = authService.getLoggedInUserByEmail(email);
+        if (authController.authenticate(email, password)) {
+            // loggedInUser sera null car on n'a plus cette méthode
+            loggedInUser = null;
             showSuccessMessage();
             return true;
         } else {

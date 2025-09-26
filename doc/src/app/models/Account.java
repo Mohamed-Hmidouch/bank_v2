@@ -2,21 +2,34 @@ package app.models;
 
 import java.math.BigDecimal;
 import java.util.*;
+import app.models.Enums.AccountType;
+
 public class Account {
     private long id;
     private BigDecimal solde;
     private String status = "active";
+    private AccountType type; // Type de compte : COURANT, EPARGNE, CREDIT
     private List<Transaction> transactions;
     private List<Historique> historiques; // Relation One-to-Many : un compte peut avoir plusieurs historiques
     private List<Rapport> rapports;
     private long clientId; // Relation Many-to-One : un compte appartient à un seul client
     
-    public Account() {}
+    public Account() {
+        // Pas de type par défaut - doit être spécifié explicitement
+    }
         
     public Account(long id, BigDecimal solde, long clientId) {
         this.id = id;
         this.solde = solde;
         this.clientId = clientId;
+        // Pas de type par défaut - doit être spécifié explicitement
+    }
+    
+    public Account(long id, BigDecimal solde, long clientId, AccountType type) {
+        this.id = id;
+        this.solde = solde;
+        this.clientId = clientId;
+        this.type = type;
     }
     
     // Getters et Setters
@@ -28,6 +41,9 @@ public class Account {
     
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+    
+    public AccountType getType() { return type; }
+    public void setType(AccountType type) { this.type = type; }
     
     public long getClientId() { return clientId; }
     public void setClientId(long clientId) { this.clientId = clientId; }
