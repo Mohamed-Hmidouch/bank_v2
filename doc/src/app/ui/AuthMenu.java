@@ -1,6 +1,10 @@
 package app.ui;
 
 import app.Controllers.AuthController;
+import app.Controllers.TellerController;
+import app.models.User;
+import app.ui.TellerDashboard;
+import app.utils.ValidationUtils;
 import java.util.Scanner;
 
 public class AuthMenu {
@@ -51,29 +55,61 @@ public class AuthMenu {
         System.out.print("Email: ");
         String email = scanner.nextLine().trim();
         
-        if (email.isEmpty()) {
+        // Utiliser ValidationUtils au lieu de validation manuelle
+        if (!ValidationUtils.isNotEmpty(email)) {
             System.out.println("❌ Email obligatoire!");
+            return;
+        }
+        
+        if (!ValidationUtils.isValidEmail(email)) {
+            System.out.println("❌ Email invalide!");
             return;
         }
         
         System.out.print("Mot de passe: ");
         String password = scanner.nextLine().trim();
         
-        if (password.isEmpty()) {
+        if (!ValidationUtils.isNotEmpty(password)) {
             System.out.println("❌ Mot de passe obligatoire!");
             return;
         }
         
         try {
-            boolean success = authController.authenticate(email, password);
-            if (success) {
-                System.out.println("✅ Connexion réussie!");
-                System.out.println("   Email: " + email);
-            } else {
-                System.out.println("❌ Email ou mot de passe incorrect!");
-            }
+            // AuthController retourne User maintenant, pas boolean
+            User user = authController.authenticate(email, password);
+            System.out.println("✅ Connexion réussie!");
+            System.out.println("   Email: " + email);
+            System.out.println("   Rôle: " + user.getRole());
+            
+            // Redirection selon le rôle
+            redirectToRoleDashboard(user);
+            
         } catch (Exception e) {
             System.out.println("❌ Erreur lors de la connexion: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Redirection vers le bon dashboard selon le rôle
+     */
+    private void redirectToRoleDashboard(User user) {
+        switch (user.getRole()) {
+            case Treller:
+                System.out.println("\n🏦 Accès au Dashboard TELLER...");
+                TellerDashboard tellerDashboard = new TellerDashboard();
+                tellerDashboard.showDashboard();
+                break;
+            case Admin:
+                System.out.println("\n🔐 Accès Dashboard ADMIN (non implémenté)");
+                break;
+            case Manager:
+                System.out.println("\n💼 Accès Dashboard MANAGER (non implémenté)");
+                break;
+            case Auditor:
+                System.out.println("\n📊 Accès Dashboard AUDITEUR (non implémenté)");
+                break;
+            default:
+                System.out.println("❌ Rôle inconnu: " + user.getRole());
         }
     }
 }

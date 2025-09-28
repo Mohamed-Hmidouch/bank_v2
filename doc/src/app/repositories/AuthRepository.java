@@ -1,5 +1,6 @@
 package app.repositories;
 
+import app.repositories.interfaces.AuthInterface;
 import app.models.*;
 
 import java.sql.Connection;

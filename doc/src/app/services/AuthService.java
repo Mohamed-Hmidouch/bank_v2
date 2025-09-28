@@ -1,18 +1,19 @@
 package app.services;
 
-import app.models.User;
+import app.models.*;
 import app.repositories.AuthRepository;
 import app.utils.ValidationUtils;
 
-public class AuthService {
+public class AuthService{
 
     private AuthRepository authRepository;
 
-    public AuthService(AuthRepository authRepository) {
-        this.authRepository = authRepository;
+    // ✅ AuthService ne connaît QUE AuthRepository et gère ses dépendances
+    public AuthService() {
+        this.authRepository = new AuthRepository();
     }
 
-    public boolean login(String email, String password) {
+    public User login(String email, String password) {
         if (!ValidationUtils.isNotEmpty(email))
             throw new IllegalArgumentException(ValidationUtils.ErrorMessages.EMPTY_FIELD);
 
@@ -23,11 +24,11 @@ public class AuthService {
             throw new IllegalArgumentException(ValidationUtils.ErrorMessages.INVALID_PASSWORD);
 
         User user = authRepository.findByEmailAndPassword(email, password);
-
+        
         if (user == null)
-            throw new IllegalArgumentException("Invalide User");
+            throw new IllegalArgumentException("Invalide User");        
         authRepository.updateLoggedInStatus(user.getId(), true);
-        return true;
+        return user;
     }
 
     public void logout(long userId) {
