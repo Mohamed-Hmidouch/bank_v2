@@ -2,7 +2,6 @@ package app.repositories.interfaces;
 
 import app.models.Client;
 import java.util.List;
-import java.util.UUID;
 
 /**
  * Interface pour la gestion des clients dans le système bancaire.
@@ -33,15 +32,16 @@ public interface ClientInterface {
     
     /**
      * Met à jour les informations d'un client existant.
+     * @param id L'ID du client à mettre à jour
      * @param client L'objet Client avec les nouvelles données
      * @throws RuntimeException si client inexistant ou erreur de mise à jour
      */
-    void update(Client client);
+    void update(Long id, Client client);
     
     /**
      * Suppression logique d'un client (désactivation).
-     * @param id L'UUID du client à désactiver
+     * @param id L'ID du client à désactiver
      * @throws RuntimeException si client inexistant
      */
-    void delete(UUID id);
+    void delete(Long id);
 }

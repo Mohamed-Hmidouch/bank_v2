@@ -8,22 +8,16 @@ public class Account {
     private long id;
     private BigDecimal solde;
     private String status = "active";
-    private AccountType type; // Type de compte : COURANT, EPARGNE, CREDIT
+    private AccountType type;
     private List<Transaction> transactions;
-    private List<Historique> historiques; // Relation One-to-Many : un compte peut avoir plusieurs historiques
+    private List<Historique> historiques;
     private List<Rapport> rapports;
-    private long clientId; // Relation Many-to-One : un compte appartient à un seul client
+    private long clientId;
     
     public Account() {
         // Pas de type par défaut - doit être spécifié explicitement
     }
         
-    public Account(long id, BigDecimal solde, long clientId) {
-        this.id = id;
-        this.solde = solde;
-        this.clientId = clientId;
-        // Pas de type par défaut - doit être spécifié explicitement
-    }
     
     public Account(long id, BigDecimal solde, long clientId, AccountType type) {
         this.id = id;
