@@ -71,7 +71,7 @@ public class AccountRepository implements AccountInterface {
 
     @Override
     public List<Account> findByClientId(Long clientId) {
-        String sql = "SELECT * FROM account WHERE clientId = ?";
+        String sql = "SELECT * FROM account WHERE clientId = ? AND deleted_at IS NULL";
         List<Account> accounts = new ArrayList<>();
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -95,7 +95,7 @@ public class AccountRepository implements AccountInterface {
 
     @Override
     public boolean update(Account account) {
-        String sql = "UPDATE account SET solde = ?, status = ?, type = ?::account_type WHERE id = ?";
+        String sql = "UPDATE account SET solde = ?, status = ?, type = ?::account_type WHERE id = ? AND deleted_at IS NULL";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setBigDecimal(1, account.getSolde());
@@ -124,7 +124,7 @@ public class AccountRepository implements AccountInterface {
 
     @Override
     public boolean isAccountActive(Long accountId) {
-        String sql = "SELECT status FROM account WHERE id = ?";
+        String sql = "SELECT status FROM account WHERE id = ? AND deleted_at IS NULL";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setLong(1, accountId);
