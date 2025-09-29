@@ -57,7 +57,25 @@ public class TransactionRepository implements TransactionInterface {
 
     @Override
     public List<Transaction> findByAccountId(long accountId) {
-        // TODO: Implémenter pour historique compte
-        return new ArrayList<>();
+        String sql = "SELECT id, accountId, datetransaction, montant FROM transaction WHERE accountId = ? ORDER BY datetransaction DESC";
+        List<Transaction> transactions = new ArrayList<>();
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, accountId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    Transaction tx = new Transaction();
+                    tx.setId((java.util.UUID) rs.getObject("id"));
+                    tx.setAccountId(rs.getLong("accountId"));
+                    Timestamp ts = rs.getTimestamp("datetransaction");
+                    if (ts != null) tx.setDateTransaction(ts.toLocalDateTime());
+                    tx.setMontant(rs.getBigDecimal("montant").setScale(2, java.math.RoundingMode.HALF_UP));
+                    transactions.add(tx);
+                }
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Erreur récupération transactions pour accountId=" + accountId + " : " + e.getMessage(), e);
+        }
+        return transactions;
     }
 }

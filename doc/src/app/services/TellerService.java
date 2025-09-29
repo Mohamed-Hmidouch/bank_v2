@@ -95,8 +95,36 @@ public class TellerService {
      * LOGIQUE : Account.findById() + updateSolde() + Transaction.save(DEPOSIT)
      */
     public boolean makeDeposit(Long accountId, BigDecimal montant) {
-        // TODO: Validation + mise à jour solde + traçabilité
-        return false;
+        if (montant == null) {
+            throw new IllegalArgumentException("Le montant est obligatoire.");
+        }
+        if (montant.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Le montant doit être positif.");
+        }
+
+        try {
+            // Vérifier que le compte existe (AccountRepository.findById retourne un Account avec id=0 si non trouvé)
+            Account account = accountRepository.findById(accountId);
+            if (account == null || account.getId() == 0) {
+                throw new IllegalArgumentException("Account Id pas trouvé dans la base donnée");
+            }
+
+            // Calculer nouveau solde
+            BigDecimal nouveauSolde = (account.getSolde() == null ? BigDecimal.ZERO : account.getSolde()).add(montant);
+
+            // Mettre à jour le solde du compte
+            accountRepository.updateSolde(accountId, nouveauSolde);
+
+            // Créer la transaction et remplir les attributs
+            Transaction tx = new Transaction();
+            tx.setAccountId(accountId);
+            tx.setDateTransaction(LocalDateTime.now());
+            tx.setMontant(montant.setScale(2, java.math.RoundingMode.HALF_UP));
+            transactionRepository.save(tx);
+            return true;
+        } catch (Exception e) {
+            throw new RuntimeException("erreur lors make deposit: " + e.getMessage(), e);
+        }
     }
 
     /**
@@ -105,8 +133,34 @@ public class TellerService {
      * Transaction.save(WITHDRAW)
      */
     public boolean makeWithdrawal(Long accountId, BigDecimal montant) {
-        // TODO: Validation solde + retrait + traçabilité
-        return false;
+        if (montant == null) {
+            throw new IllegalArgumentException("Le montant est obligatoire.");
+        }
+        if (montant.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Le montant doit être positif.");
+        }
+        try {
+            Account account = accountRepository.findById(accountId);
+            if (account == null || account.getId() == 0) {
+                throw new IllegalArgumentException("Account Id pas trouvé dans la base donnée");
+            }
+
+            // Calculer nouveau solde
+            BigDecimal nouveauSolde = (account.getSolde() == null ? BigDecimal.ZERO : account.getSolde()).subtract(montant);
+
+            // Mettre à jour le solde du compte
+            accountRepository.updateSolde(accountId, nouveauSolde);
+
+            // Créer la transaction et remplir les attributs
+            Transaction tx = new Transaction();
+            tx.setAccountId(accountId);
+            tx.setDateTransaction(LocalDateTime.now());
+            tx.setMontant(montant.setScale(2, java.math.RoundingMode.HALF_UP));
+            transactionRepository.save(tx);
+            return true;
+        } catch (Exception e) {
+            throw new RuntimeException("erreur lors make withdraw: " + e.getMessage(), e);
+        }
     }
 
     /**
@@ -115,7 +169,31 @@ public class TellerService {
      * Transaction.save()
      */
     public boolean makeInternalTransfer(Long compteSource, Long compteDestination, BigDecimal montant) {
-        // TODO: Double validation + double mise à jour + double traçabilité
+        if (compteSource == null) {
+            throw new IllegalArgumentException("ID compte source manquant");
+        }
+
+        Account accountSource = accountRepository.findById(compteSource);
+
+        if (accountSource == null) {
+            throw new IllegalArgumentException("Compte source introuvable : " + compteSource);
+        }
+
+        if (accountSource.getId() == 0L) {
+            throw new IllegalArgumentException("Compte source introuvable : " + compteSource);
+        }
+
+        if (accountSource.getId() != compteSource.longValue()) {
+            throw new IllegalStateException("Mismatch entre ID fourni et ID lu en base");
+        }
+
+        if (!accountRepository.isAccountActive(compteSource)) {
+            throw new IllegalStateException("Compte source inactif");
+        }
+
+        if(montant == null ||  montant.compareTo(BigDecimal.ZERO) <= 0){
+            throw new IllegalArgumentException("Le montant est obligatoire doit etre possitif");
+        }
         return false;
     }
 
