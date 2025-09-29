@@ -2,6 +2,10 @@ package app.repositories;
 
 import app.repositories.interfaces.CreditInterface;
 import app.models.Credit;
+import app.models.Manger;
+import app.models.Treller;
+import app.models.Account;
+import app.models.Enums.CreditStatus;
 import app.utils.DatabaseConnection;
 import java.sql.*;
 import java.math.BigDecimal;
@@ -65,9 +69,52 @@ public class CreditRepository implements CreditInterface {
         }
     }
     
+    /**
+     * MÉTHODE CRITIQUE : Recherche tous les crédits d'un compte
+     * UTILISÉE POUR : Suivi des demandes de crédit par account
+     * - Manager : Voir les crédits en attente d'approbation  
+     * - Teller : Consulter historique des crédits d'un client
+     * - Audit : Traçabilité complète des crédits
+     */
     @Override
     public List<Credit> findByAccountId(long accountId) {
-        // TODO: Implémenter pour suivi crédits compte
-        return new ArrayList<>();
+        String sql = "SELECT * FROM credit WHERE account_id = ? AND deleted_at IS NULL ORDER BY id DESC";
+        List<Credit> credits = new ArrayList<>();
+        
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setLong(1, accountId);
+            
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    Credit credit = new Credit();
+                    Manger validateBy = new Manger();
+                    Treller createBy = new Treller();
+                    credit.setId(rs.getLong("id"));
+                    
+                    // Créer un Account minimal avec juste l'ID
+                    Account account = new Account();
+                    account.setId(rs.getLong("account_id"));
+                    credit.setAccount(account);
+                    // Mapper les données directement depuis la DB
+                    credit.setMontantInitial(rs.getBigDecimal("montantinitial"));
+                    credit.setTaux(rs.getBigDecimal("taux"));
+                    credit.setDureMois(rs.getInt("duremois"));
+                    String statusStr = rs.getString("status");
+                    credit.setStatus(CreditStatus.valueOf(statusStr));
+                    validateBy.setId(rs.getLong("validateby_id"));
+                    createBy.setId(rs.getLong("creeby_id"));
+                    credit.setCreeBy(createBy);
+                    credit.setValidateBy(validateBy);
+                    credits.add(credit);
+                }
+            }
+            
+        } catch (SQLException e) {
+            throw new RuntimeException("Erreur recherche crédits par accountId : " + e.getMessage(), e);
+        }
+        
+        return credits;
     }
 }
