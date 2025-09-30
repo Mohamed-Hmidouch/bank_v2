@@ -1,5 +1,6 @@
 package app.Controllers;
 
+import app.models.Treller;
 import app.services.TellerService;
 import java.math.BigDecimal;
 
@@ -210,7 +211,7 @@ public class TellerController {
      * USE CASE 6 : Demande de crédit
      * VALIDATION TECHNIQUE : AccountId valide, montant/taux/durée positifs
      */
-    public boolean requestCredit(Long accountId, BigDecimal montant, BigDecimal taux, int dureeMois) {
+    public boolean requestCredit(Long accountId, Long creeBy,BigDecimal montant, BigDecimal taux, int dureeMois) {
         try {
             // ===== VALIDATIONS TECHNIQUES =====
             if (accountId == null || accountId <= 0) {
@@ -233,7 +234,7 @@ public class TellerController {
             }
 
             // ===== DÉLÉGATION SERVICE =====
-            return tellerService.requestCredit(accountId, montant, taux, dureeMois);
+            return tellerService.requestCredit(accountId, creeBy,montant, taux, dureeMois);
 
         } catch (IllegalArgumentException e) {
             System.err.println("Erreur validation : " + e.getMessage());

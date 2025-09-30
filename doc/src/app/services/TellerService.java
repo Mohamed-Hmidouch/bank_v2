@@ -1,14 +1,12 @@
 package app.services;
 
 import app.models.Enums.AccountType;
-import app.repositories.ClientRepository;
-import app.repositories.AccountRepository;
-import app.repositories.TransactionRepository;
-import app.repositories.CreditRepository;
+import app.repositories.*;
 import app.models.*;
 import app.models.Enums.CreditStatus;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 import javax.imageio.IIOException;
 
@@ -29,12 +27,32 @@ public class TellerService {
     private final AccountRepository accountRepository;
     private final TransactionRepository transactionRepository;
     private final CreditRepository creditRepository;
+    private final TrellerRepository trellerRepository;
 
     public TellerService() {
         this.clientRepository = new ClientRepository();
         this.accountRepository = new AccountRepository();
         this.transactionRepository = new TransactionRepository();
         this.creditRepository = new CreditRepository();
+        this.trellerRepository = new TrellerRepository();
+    }
+
+    // ✅ Méthode privée réutilisable pour valider un compte
+    private Account validateAccount(Long accountId, String context) {
+        if (accountId == null || accountId <= 0) {
+            throw new IllegalArgumentException("ID " + context + " invalide");
+        }
+
+        Account account = accountRepository.findById(accountId);
+        if (account == null || account.getId() == 0L) {
+            throw new IllegalArgumentException("Compte " + context + " introuvable : " + accountId);
+        }
+
+        if (!accountRepository.isAccountActive(accountId)) {
+            throw new IllegalStateException("Compte " + context + " inactif");
+        }
+
+        return account;
     }
 
     /**
@@ -103,11 +121,8 @@ public class TellerService {
         }
 
         try {
-            // Vérifier que le compte existe (AccountRepository.findById retourne un Account avec id=0 si non trouvé)
-            Account account = accountRepository.findById(accountId);
-            if (account == null || account.getId() == 0) {
-                throw new IllegalArgumentException("Account Id pas trouvé dans la base donnée");
-            }
+            // Réutilise la méthode centrale de validation
+            Account account = validateAccount(accountId, "compte");
 
             // Calculer nouveau solde
             BigDecimal nouveauSolde = (account.getSolde() == null ? BigDecimal.ZERO : account.getSolde()).add(montant);
@@ -140,11 +155,7 @@ public class TellerService {
             throw new IllegalArgumentException("Le montant doit être positif.");
         }
         try {
-            Account account = accountRepository.findById(accountId);
-            if (account == null || account.getId() == 0) {
-                throw new IllegalArgumentException("Account Id pas trouvé dans la base donnée");
-            }
-
+            Account account = validateAccount(accountId, "compte");
             // Calculer nouveau solde
             BigDecimal nouveauSolde = (account.getSolde() == null ? BigDecimal.ZERO : account.getSolde()).subtract(montant);
 
@@ -163,46 +174,99 @@ public class TellerService {
         }
     }
 
+
     /**
      * USE CASE 5 : Virement interne
      * LOGIQUE COMPLEXE : 2 comptes + validation + 2 updateSolde() + 2
      * Transaction.save()
      */
     public boolean makeInternalTransfer(Long compteSource, Long compteDestination, BigDecimal montant) {
-        if (compteSource == null) {
-            throw new IllegalArgumentException("ID compte source manquant");
+        validateAccount(compteSource, "source");
+        validateAccount(compteDestination, "destination");
+        if (compteSource.equals(compteDestination)) {
+            throw new IllegalArgumentException("Les comptes source et destination doivent être différents");
         }
-
-        Account accountSource = accountRepository.findById(compteSource);
-
-        if (accountSource == null) {
-            throw new IllegalArgumentException("Compte source introuvable : " + compteSource);
+        // Validation montant
+        if (montant == null || montant.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Le montant doit être positif");
         }
+        try {
+            Account sourceAccount = accountRepository.findById(compteSource);
+            Account destinationAccount = accountRepository.findById(compteDestination);
 
-        if (accountSource.getId() == 0L) {
-            throw new IllegalArgumentException("Compte source introuvable : " + compteSource);
-        }
+            BigDecimal SoldeSource = sourceAccount.getSolde().subtract(montant);
+            BigDecimal SoldeDestination = destinationAccount.getSolde().add(montant);
 
-        if (accountSource.getId() != compteSource.longValue()) {
-            throw new IllegalStateException("Mismatch entre ID fourni et ID lu en base");
-        }
+            accountRepository.updateSolde(compteSource, SoldeSource);
+            accountRepository.updateSolde(compteDestination, SoldeDestination);
 
-        if (!accountRepository.isAccountActive(compteSource)) {
-            throw new IllegalStateException("Compte source inactif");
-        }
+            Transaction txDebit = new Transaction();
+            txDebit.setAccountId(compteSource);
+            txDebit.setDateTransaction(LocalDateTime.now());
+            txDebit.setMontant(montant.negate());
+            transactionRepository.save(txDebit);
 
-        if(montant == null ||  montant.compareTo(BigDecimal.ZERO) <= 0){
-            throw new IllegalArgumentException("Le montant est obligatoire doit etre possitif");
+            Transaction txCredit = new Transaction();
+            txCredit.setAccountId(compteDestination);
+            txCredit.setDateTransaction(LocalDateTime.now());
+            txCredit.setMontant(montant.setScale(2, java.math.RoundingMode.HALF_UP));
+            transactionRepository.save(txCredit);
+            return true;
+        } catch (Exception e) {
+            throw new RuntimeException("erreur lors make debit transfer: " + e.getMessage(), e);
         }
-        return false;
     }
 
     /**
      * USE CASE 6 : Demande de crédit (SANS TYPE)
      * WORKFLOW : Credit.save() avec STATUS=PENDING → Manager approval
      */
-    public boolean requestCredit(Long accountId, BigDecimal montant, BigDecimal taux, int dureeMois) {
-        // TODO: Validation + Credit.save() STATUS=PENDING
-        return false;
+    public boolean requestCredit(Long accountId,Long creeBy, BigDecimal montant, BigDecimal taux, int dureeMois) {
+        BigDecimal tauxMAx = new BigDecimal(20.00);
+        if(accountId == null || accountId <= 0)
+            throw new IllegalArgumentException("l'id est null");
+        if(montant == null || montant.compareTo(BigDecimal.ZERO) < 0)
+            throw new IllegalArgumentException("Montant est null !!");
+        if (taux == null || taux.compareTo(BigDecimal.ZERO) < 0 || taux.compareTo(tauxMAx) > 0)
+            throw new IllegalArgumentException("Taux inccorect !!");
+        if(dureeMois < 0 || dureeMois > 360)
+            throw new IllegalArgumentException("Dures non accepté");
+
+        try {
+            validateAccount(accountId,"credit");
+            if(!accountRepository.isAccountActive(accountId))
+                throw new RuntimeException("this account is not active" + accountId);
+            List<Credit> creditsClient = creditRepository.findByAccountId(accountId);
+            long nCredit = creditsClient.stream().filter(c -> c.getStatus() == CreditStatus.ACTIVE).count();
+            if(nCredit >= 2)
+                throw new RuntimeException("vous avez plus q'un credit en cour !!" + nCredit);
+            
+            // ✅ Créer le crédit avec les relations ID testées
+            Credit credit = new Credit();
+            Account account = accountRepository.findById(accountId);
+            credit.setAccount(account);  // Relation avec l'objet Account validé
+            credit.setMontantInitial(montant);
+            credit.setTaux(taux);
+            credit.setDureMois(dureeMois);
+            credit.setStatus(CreditStatus.PENDING_APPROVAL);
+            Treller tellerCreateur = trellerRepository.findById(creeBy);
+            credit.setCreeBy(tellerCreateur);
+            // Sauvegarder le crédit
+            creditRepository.save(credit);
+            
+            // ✅ Sauvegarder la transaction pour traçabilité
+            Transaction tx = new Transaction();
+            tx.setAccountId(accountId);  // Relation avec l'ID testé
+            tx.setDateTransaction(LocalDateTime.now());
+            tx.setMontant(montant.setScale(2, java.math.RoundingMode.HALF_UP));
+            transactionRepository.save(tx);
+
+
+            return true;
+            
+        } catch (Exception e) {
+            // TODO: GESTION ERREUR
+            throw new RuntimeException("Erreur lors de la demande de crédit : " + e.getMessage(), e);
+        }
     }
 }

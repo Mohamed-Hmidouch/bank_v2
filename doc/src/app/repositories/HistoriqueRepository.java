@@ -73,7 +73,6 @@ public class HistoriqueRepository implements HistoriqueInterface {
                     if (!rs.wasNull()) {
                         Auditor auditor = new Auditor();
                         auditor.setId(auditorId);
-                        auditor.setFullname(rs.getString("auditor_name"));
                         h.setAuditor(auditor);
                     }
                     list.add(h);

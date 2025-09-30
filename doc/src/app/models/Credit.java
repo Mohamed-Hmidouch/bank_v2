@@ -16,7 +16,7 @@ public class Credit {
     private BigDecimal montantInitial;
     private BigDecimal taux;
     private int dureMois;
-    private List<Echeance> echeances; // Relation One-to-Many : un crédit peut avoir plusieurs échéances
+    private List<Echeance> echeances;
 
     public Credit() {}
 
