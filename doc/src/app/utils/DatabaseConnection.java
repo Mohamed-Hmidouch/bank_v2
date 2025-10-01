@@ -15,7 +15,6 @@ public class DatabaseConnection {
             if (conn == null || conn.isClosed()) {
                 Class.forName("org.postgresql.Driver");
                 conn = DriverManager.getConnection(URL, USER, PASSWORD);
-                System.out.println("Connexion à la base de données établie");
             }
         } catch (ClassNotFoundException e) {
             System.err.println("Driver PostgreSQL non trouvé : " + e.getMessage());

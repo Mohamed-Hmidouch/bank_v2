@@ -42,7 +42,7 @@ public class CreditRepository implements CreditInterface {
             
             // Mapping simplifié SANS colonne type
             stmt.setLong(1, credit.getAccount().getId());           // account_id (FK vers account)
-            stmt.setLong(2, credit.getValidateBy().getId());        // validateby_id (Manager qui validera)
+            stmt.setNull(2, java.sql.Types.BIGINT);  // validateby_id (Manager qui validera)
             stmt.setLong(3, credit.getCreeBy().getId());            // creeby_id (Teller qui crée)
             stmt.setString(4, credit.getStatus().toString());       // status::credit_status (PENDING)
             stmt.setBigDecimal(5, credit.getMontantInitial());      // montantinitial (numeric 18,2)

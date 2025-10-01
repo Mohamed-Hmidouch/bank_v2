@@ -1,9 +1,10 @@
 package app.services;
 
-import app.models.Enums.AccountType;
+import app.models.Enums.*;
 import app.repositories.*;
 import app.models.*;
 import app.models.Enums.CreditStatus;
+import app.models.Enums.CreditType;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -61,8 +62,8 @@ public class TellerService {
      */
     public boolean createClientWithFirstAccount(String nom, String prenom, String email,String telephone, String typeCompte, BigDecimal soldeInitial)
     {
-        if(clientRepository.findByEmail(email) != null){
-            throw new IllegalAccessError("Un client avec c'est email est deja exité");
+        if (clientRepository.findByEmail(email) != null) {
+            throw new IllegalArgumentException("Un client avec cet email existe déjà.");
         }
         if(soldeInitial.compareTo(BigDecimal.ZERO) <= 0){
             throw new IllegalArgumentException("Tu doit ajouté un monatnt infrérieur de 0 comme solde initial");
@@ -90,7 +91,7 @@ public class TellerService {
      * VALIDATION : Client existe via findByClientId() + Account.save()
      */
     public boolean createAdditionalAccount(Long clientId, String typeCompte, BigDecimal soldeInitial) {
-        if (clientId == null || clientId <= 0) {
+        if (clientId == null || clientId < 0) {
             throw new IllegalArgumentException("ID client invalide.");
         }
         if (soldeInitial == null || soldeInitial.compareTo(BigDecimal.ZERO) <= 0) {
@@ -135,6 +136,7 @@ public class TellerService {
             tx.setAccountId(accountId);
             tx.setDateTransaction(LocalDateTime.now());
             tx.setMontant(montant.setScale(2, java.math.RoundingMode.HALF_UP));
+            tx.setType(TransactionType.DEPOSIT);
             transactionRepository.save(tx);
             return true;
         } catch (Exception e) {
@@ -167,6 +169,7 @@ public class TellerService {
             tx.setAccountId(accountId);
             tx.setDateTransaction(LocalDateTime.now());
             tx.setMontant(montant.setScale(2, java.math.RoundingMode.HALF_UP));
+            tx.setType(TransactionType.WITHDRAW);
             transactionRepository.save(tx);
             return true;
         } catch (Exception e) {
@@ -204,12 +207,14 @@ public class TellerService {
             txDebit.setAccountId(compteSource);
             txDebit.setDateTransaction(LocalDateTime.now());
             txDebit.setMontant(montant.negate());
+            txDebit.setType(TransactionType.TRANSFEROUT);
             transactionRepository.save(txDebit);
 
             Transaction txCredit = new Transaction();
             txCredit.setAccountId(compteDestination);
             txCredit.setDateTransaction(LocalDateTime.now());
             txCredit.setMontant(montant.setScale(2, java.math.RoundingMode.HALF_UP));
+            txCredit.setType(TransactionType.TRANSFERIN);
             transactionRepository.save(txCredit);
             return true;
         } catch (Exception e) {
@@ -221,7 +226,7 @@ public class TellerService {
      * USE CASE 6 : Demande de crédit (SANS TYPE)
      * WORKFLOW : Credit.save() avec STATUS=PENDING → Manager approval
      */
-    public boolean requestCredit(Long accountId,Long creeBy, BigDecimal montant, BigDecimal taux, int dureeMois) {
+    public boolean requestCredit(Long accountId, BigDecimal montant, BigDecimal taux, int dureeMois, CreditType typeCredit) {
         BigDecimal tauxMAx = new BigDecimal(20.00);
         if(accountId == null || accountId <= 0)
             throw new IllegalArgumentException("l'id est null");
@@ -240,32 +245,33 @@ public class TellerService {
             long nCredit = creditsClient.stream().filter(c -> c.getStatus() == CreditStatus.ACTIVE).count();
             if(nCredit >= 2)
                 throw new RuntimeException("vous avez plus q'un credit en cour !!" + nCredit);
-            
-            // ✅ Créer le crédit avec les relations ID testées
+
             Credit credit = new Credit();
             Account account = accountRepository.findById(accountId);
-            credit.setAccount(account);  // Relation avec l'objet Account validé
+            credit.setAccount(account);
             credit.setMontantInitial(montant);
             credit.setTaux(taux);
             credit.setDureMois(dureeMois);
             credit.setStatus(CreditStatus.PENDING_APPROVAL);
-            Treller tellerCreateur = trellerRepository.findById(creeBy);
+            credit.setType(typeCredit);
+
+            // Utilisation du Treller courant depuis le contexte (jamais de paramètre UI)
+            Treller tellerCreateur = trellerRepository.getConnectTreller();
+            if (tellerCreateur == null)
+                throw new IllegalStateException("Aucun treller connecté en session");
             credit.setCreeBy(tellerCreateur);
-            // Sauvegarder le crédit
+
             creditRepository.save(credit);
-            
-            // ✅ Sauvegarder la transaction pour traçabilité
+
             Transaction tx = new Transaction();
-            tx.setAccountId(accountId);  // Relation avec l'ID testé
+            tx.setAccountId(accountId);
             tx.setDateTransaction(LocalDateTime.now());
             tx.setMontant(montant.setScale(2, java.math.RoundingMode.HALF_UP));
+            tx.setType(TransactionType.CREDIT);
             transactionRepository.save(tx);
 
-
             return true;
-            
         } catch (Exception e) {
-            // TODO: GESTION ERREUR
             throw new RuntimeException("Erreur lors de la demande de crédit : " + e.getMessage(), e);
         }
     }

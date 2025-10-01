@@ -6,29 +6,25 @@ import app.repositories.interfaces.ClientInterface;
 import app.utils.DatabaseConnection;
 
 public class ClientRepository implements ClientInterface {
-    private final Connection conn;
-
-    public ClientRepository() {
-        this.conn = DatabaseConnection.getConnection();
-    }
 
     public void save(Client client) {
-        String sql = "INSERT INTO client (id, nom, prenom, email, telephone) VALUES (?, ?, ?, ?, ?)";
-        try (var stmt = conn.prepareStatement(sql)) {
-            stmt.setObject(1, client.getId());
-            stmt.setString(2, client.getNom());
-            stmt.setString(3, client.getPrenom());
-            stmt.setString(4, client.getEmail());
-            stmt.setString(5, client.getTelephone());
+        String sql = "INSERT INTO client (nom, prenom, email, telephone) VALUES (?, ?, ?, ?)";
+        try (Connection connection = DatabaseConnection.getConnection();
+             PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setString(1, client.getNom());
+            stmt.setString(2, client.getPrenom());
+            stmt.setString(3, client.getEmail());
+            stmt.setString(4, client.getTelephone());
             stmt.executeUpdate();
-        } catch (Exception e) {
-            throw new RuntimeException("Erreur lors de la sauvegarde du client", e);
+        } catch (SQLException e) {
+            throw new RuntimeException("Erreur lors de la sauvegarde du client: " + e.getMessage(), e);
         }
     }
 
     public Client findByEmail(String email) {
         String sql = "SELECT * FROM client WHERE email = ? AND deleted_at IS NULL";
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+        try (Connection connection = DatabaseConnection.getConnection();
+             PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setString(1, email);
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -41,8 +37,8 @@ public class ClientRepository implements ClientInterface {
                     return client;
                 }
             }
-        } catch (Exception e) {
-            throw new RuntimeException("Erreur lors de la recherche du client par email", e);
+        } catch (SQLException e) {
+            throw new RuntimeException("Erreur lors de la recherche du client par email: " + e.getMessage(), e);
         }
         return null;
     }
@@ -51,7 +47,8 @@ public class ClientRepository implements ClientInterface {
     public java.util.List<Client> findAll() {
         String sql = "SELECT * FROM client WHERE deleted_at IS NULL";
         java.util.List<Client> clients = new java.util.ArrayList<>();
-        try (PreparedStatement stmt = conn.prepareStatement(sql);
+        try (Connection connection = DatabaseConnection.getConnection();
+             PreparedStatement stmt = connection.prepareStatement(sql);
              ResultSet rs = stmt.executeQuery()) {
             while (rs.next()) {
                 Client client = new Client();
@@ -62,8 +59,8 @@ public class ClientRepository implements ClientInterface {
                 client.setTelephone(rs.getString("telephone"));
                 clients.add(client);
             }
-        } catch (Exception e) {
-            throw new RuntimeException("Erreur lors de la récupération des clients", e);
+        } catch (SQLException e) {
+            throw new RuntimeException("Erreur lors de la récupération des clients: " + e.getMessage(), e);
         }
         return new java.util.ArrayList<>(clients);
     }
@@ -71,25 +68,27 @@ public class ClientRepository implements ClientInterface {
     @Override
     public void update(Long id, Client client) {
         String sql = "UPDATE client SET nom = ?, prenom = ?, email = ?, telephone = ? WHERE id = ? AND deleted_at IS NULL";
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+        try (Connection connection = DatabaseConnection.getConnection();
+             PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setString(1, client.getNom());
             stmt.setString(2, client.getPrenom());
             stmt.setString(3, client.getEmail());
             stmt.setString(4, client.getTelephone());
             stmt.setLong(5, id);
             stmt.executeUpdate();
-        } catch (Exception e) {
-            throw new RuntimeException("Erreur lors de la mise à jour du client", e);
+        } catch (SQLException e) {
+            throw new RuntimeException("Erreur lors de la mise à jour du client: " + e.getMessage(), e);
         }
     }
 
     public void delete(Long id){
         String sql = "UPDATE client SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?";
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+        try (Connection connection = DatabaseConnection.getConnection();
+             PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setLong(1, id);
             stmt.executeUpdate();
-        } catch (Exception e) {
-            throw new RuntimeException("Erreur lors de la suppression logique du client", e);
+        } catch (SQLException e) {
+            throw new RuntimeException("Erreur lors de la suppression logique du client: " + e.getMessage(), e);
         }
     }
 }

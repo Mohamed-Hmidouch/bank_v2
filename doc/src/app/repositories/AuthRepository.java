@@ -97,4 +97,19 @@ public class AuthRepository implements AuthInterface {
         }
         return false;
     }
+
+        
+        public Long getConnectUser() {
+            String sql = "SELECT id FROM users WHERE logged_in = true LIMIT 1";
+            try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        return rs.getLong("id");
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("Erreur lors de la récupération de l'ID de l'utilisateur connecté : " + e.getMessage());
+            }
+            return null;
+        }
 }

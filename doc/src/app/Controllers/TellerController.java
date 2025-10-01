@@ -1,6 +1,7 @@
 package app.Controllers;
 
 import app.services.TellerService;
+import app.models.Enums.CreditType;
 import java.math.BigDecimal;
 
 /**
@@ -53,7 +54,7 @@ public class TellerController {
 
     public boolean createAdditionalAccount(Long clientId, String typeCompte, BigDecimal soldeInitial) {
         return handleException(() -> {
-            if (clientId == null || clientId <= 0 || !validateString(typeCompte) || soldeInitial == null)
+            if (clientId == null || clientId < 0 || !validateString(typeCompte) || soldeInitial == null)
                 throw new IllegalArgumentException("Tous les champs sont obligatoires.");
             String type = typeCompte.trim().toUpperCase();
             if (!type.equals("COURANT") && !type.equals("EPARGNE"))
@@ -90,13 +91,13 @@ public class TellerController {
         });
     }
 
-    public boolean requestCredit(Long accountId, Long creeBy, BigDecimal montant, BigDecimal taux, int dureeMois) {
+    public boolean requestCredit(Long accountId, BigDecimal montant, BigDecimal taux, int dureeMois, CreditType typeCredit) {
         return handleException(() -> {
-            if (accountId == null || accountId <= 0 || creeBy == null || creeBy <= 0 ||
+            if (accountId == null || accountId <= 0 ||
                 montant == null || montant.compareTo(BigDecimal.ZERO) <= 0 ||
                 taux == null || taux.compareTo(BigDecimal.ZERO) < 0 || dureeMois <= 0)
                 throw new IllegalArgumentException("Paramètres crédit invalides.");
-            tellerService.requestCredit(accountId, creeBy, montant, taux, dureeMois);
+            tellerService.requestCredit(accountId, montant, taux, dureeMois, typeCredit);
         });
     }
 }

@@ -88,4 +88,23 @@ public class TrellerRepository {
         // Ajouter ici les champs propres à Treller si existants (ex: agence, codeGuichet, etc.)
         return treller;
     }
+
+    /**
+     * Retourne le Treller actuellement connecté (champ logged_in = true).
+     * Retourne null si aucun Treller n'est connecté.
+     */
+    public Treller getConnectTreller() {
+        String sql = "SELECT * FROM treller WHERE logged_in = true LIMIT 1";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return mapResultSetToTreller(rs);
+                }
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Erreur lors de la récupération du Treller connecté : " + e.getMessage(), e);
+        }
+        return null;
+    }
 }

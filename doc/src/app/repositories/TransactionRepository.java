@@ -4,6 +4,7 @@ import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.math.BigDecimal;
+import app.models.Enums.TransactionType;
 
 import app.models.Transaction;
 import app.repositories.interfaces.TransactionInterface;
@@ -26,7 +27,7 @@ public class TransactionRepository implements TransactionInterface {
      */
     @Override
     public Transaction save(Transaction transaction) {
-        String sql = "INSERT INTO transaction (id, accountId, datetransaction, montant) VALUES (?, ?, ?, ?)";
+     String sql = "INSERT INTO transaction (id, \"accountId\", datetransaction, montant, transaction_type) VALUES (?, ?, ?, ?, ?::transaction_type)";
         
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -41,6 +42,12 @@ public class TransactionRepository implements TransactionInterface {
             stmt.setLong(2, transaction.getAccountId());               // bigint  
             stmt.setTimestamp(3, Timestamp.valueOf(transaction.getDateTransaction())); // timestamp
             stmt.setBigDecimal(4, transaction.getMontant());           // numeric(18,2)
+            // transaction_type may be null for older records
+            if (transaction.getType() != null) {
+                stmt.setString(5, transaction.getType().name());
+            } else {
+                stmt.setNull(5, Types.OTHER);
+            }
             
             int rowsAffected = stmt.executeUpdate();
             
@@ -57,7 +64,7 @@ public class TransactionRepository implements TransactionInterface {
 
     @Override
     public List<Transaction> findByAccountId(long accountId) {
-        String sql = "SELECT id, accountId, datetransaction, montant FROM transaction WHERE accountId = ? ORDER BY datetransaction DESC";
+    String sql = "SELECT id, \"accountId\", datetransaction, montant, transaction_type FROM transaction WHERE \"accountId\" = ? ORDER BY datetransaction DESC";
         List<Transaction> transactions = new ArrayList<>();
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -70,6 +77,10 @@ public class TransactionRepository implements TransactionInterface {
                     Timestamp ts = rs.getTimestamp("datetransaction");
                     if (ts != null) tx.setDateTransaction(ts.toLocalDateTime());
                     tx.setMontant(rs.getBigDecimal("montant").setScale(2, java.math.RoundingMode.HALF_UP));
+                    String typeStr = rs.getString("transaction_type");
+                    if (typeStr != null) {
+                        tx.setType(TransactionType.valueOf(typeStr));
+                    }
                     transactions.add(tx);
                 }
             }

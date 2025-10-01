@@ -2,7 +2,6 @@ package app.repositories;
 
 import app.repositories.interfaces.AccountInterface;
 import app.models.Account;
-import app.models.Enums.AccountType;
 import app.utils.DatabaseConnection;
 import java.math.BigDecimal;
 import java.sql.*;
@@ -10,19 +9,21 @@ import java.util.*;
 
 
 public class AccountRepository implements AccountInterface {
+    // Note: DB account_type enum now uses the same labels as Java enum (COURANT, EPARGNE)
+    // so we use the enum name directly when writing and reading.
 
     /**
      * MÉTHODE CLÉ : Sauvegarde un compte ET établit la liaison avec le client
      * Cette méthode unique gère à la fois la création du compte
      * ET sa liaison automatique avec le client via clientId (Foreign Key)
-     * 
+     *
      * UTILISÉE POUR :
      * - USE CASE 1: Créer client avec premier compte
      * - USE CASE 2: Créer compte supplémentaire pour client existant
      */
     @Override
     public void save(Account account) {
-        String sql = "INSERT INTO account (solde, status, clientId, type) VALUES (?, ?, ?, ?::account_type)";
+    String sql = "INSERT INTO account (solde, status, \"clientId\", type) VALUES (?, ?, ?, ?::account_type)";
 
         try (Connection conn = DatabaseConnection.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
@@ -31,7 +32,7 @@ public class AccountRepository implements AccountInterface {
             stmt.setBigDecimal(1, account.getSolde());
             stmt.setString(2, "Active");
             stmt.setLong(3, account.getClientId()); // ← LIAISON CLIENT ICI
-            stmt.setString(4, account.getType().toString()); // COURANT ou EPARGNE
+            stmt.setString(4, account.getType() == null ? null : account.getType().name());
 
             stmt.executeUpdate();
 
@@ -60,7 +61,8 @@ public class AccountRepository implements AccountInterface {
                         account.setSolde(rs.getBigDecimal("solde"));
                         account.setStatus(rs.getString("status"));
                         account.setClientId(rs.getLong("clientId"));
-                        account.setType(AccountType.valueOf(rs.getString("type")));
+                        String typeStr = rs.getString("type");
+                        account.setType(typeStr == null ? null : app.models.Enums.AccountType.valueOf(typeStr));
                     }
                     return account;
                 }
@@ -71,7 +73,7 @@ public class AccountRepository implements AccountInterface {
 
     @Override
     public List<Account> findByClientId(Long clientId) {
-        String sql = "SELECT * FROM account WHERE clientId = ? AND deleted_at IS NULL";
+    String sql = "SELECT * FROM account WHERE \"clientId\" = ? AND deleted_at IS NULL";
         List<Account> accounts = new ArrayList<>();
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -83,7 +85,8 @@ public class AccountRepository implements AccountInterface {
                 account.setSolde(rs.getBigDecimal("solde"));
                 account.setStatus(rs.getString("status"));
                 account.setClientId(rs.getLong("clientId"));
-                account.setType(AccountType.valueOf(rs.getString("type")));
+                String typeStr = rs.getString("type");
+                account.setType(typeStr == null ? null : app.models.Enums.AccountType.valueOf(typeStr));
                 accounts.add(account);
             }
             }
@@ -100,7 +103,7 @@ public class AccountRepository implements AccountInterface {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setBigDecimal(1, account.getSolde());
             stmt.setString(2, account.getStatus());
-            stmt.setString(3, account.getType().toString());
+            stmt.setString(3, account.getType() == null ? null : account.getType().name());
             stmt.setLong(4, account.getId());
             int rows = stmt.executeUpdate();
             return rows > 0;
