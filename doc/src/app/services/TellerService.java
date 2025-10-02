@@ -60,7 +60,7 @@ public class TellerService {
      * USE CASE 1 : Créer client avec premier compte
      * ORCHESTRATION : Client.save() → récupérer ID → Account.save() avec clientId
      */
-    public boolean createClientWithFirstAccount(String nom, String prenom, String email,String telephone, String typeCompte, BigDecimal soldeInitial)
+    public boolean createClientWithFirstAccount(String nom, String prenom, String email,String telephone, BigDecimal salaire, String typeCompte, BigDecimal soldeInitial)
     {
         if (clientRepository.findByEmail(email) != null) {
             throw new IllegalArgumentException("Un client avec cet email existe déjà.");
@@ -68,12 +68,16 @@ public class TellerService {
         if(soldeInitial.compareTo(BigDecimal.ZERO) <= 0){
             throw new IllegalArgumentException("Tu doit ajouté un monatnt infrérieur de 0 comme solde initial");
         }
+        if (salaire == null || salaire.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Le salaire doit être positif ou zéro");
+        }
         try{
         Client client = new Client();
         client.setNom(nom);
         client.setPrenom(prenom);
         client.setEmail(email);
         client.setTelephone(telephone);
+        client.setSalaire(salaire);
         clientRepository.save(client);
         Account account = new Account();
         account.setSolde(soldeInitial);
@@ -241,6 +245,19 @@ public class TellerService {
             validateAccount(accountId,"credit");
             if(!accountRepository.isAccountActive(accountId))
                 throw new RuntimeException("this account is not active" + accountId);
+            
+            // Vérifier l'éligibilité basée sur le salaire du client
+            List<Client> clients = clientRepository.findAll();
+            Client client = clients.stream()
+                .filter(c -> accountRepository.findByClientId(c.getId()).stream()
+                    .anyMatch(acc -> acc.getId() == accountId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("Client non trouvé pour ce compte"));
+            
+            if (!isEligibleForCredit(client, montant)) {
+                throw new IllegalArgumentException("Client non éligible pour ce montant de crédit. Salaire insuffisant.");
+            }
+            
             List<Credit> creditsClient = creditRepository.findByAccountId(accountId);
             long nCredit = creditsClient.stream().filter(c -> c.getStatus() == CreditStatus.ACTIVE).count();
             if(nCredit >= 2)
@@ -274,5 +291,19 @@ public class TellerService {
         } catch (Exception e) {
             throw new RuntimeException("Erreur lors de la demande de crédit : " + e.getMessage(), e);
         }
+    }
+    
+    /**
+     * Vérifier l'éligibilité d'un client pour un crédit basé sur son salaire
+     * Règle métier : Le montant du crédit ne doit pas dépasser 5x le salaire mensuel
+     */
+    private boolean isEligibleForCredit(Client client, BigDecimal montantCredit) {
+        if (client.getSalaire() == null || client.getSalaire().compareTo(BigDecimal.ZERO) <= 0) {
+            return false; // Pas de salaire déclaré = pas éligible
+        }
+        
+        // Règle : montant crédit <= 5 * salaire mensuel
+        BigDecimal montantMaxAutorise = client.getSalaire().multiply(new BigDecimal("5"));
+        return montantCredit.compareTo(montantMaxAutorise) <= 0;
     }
 }

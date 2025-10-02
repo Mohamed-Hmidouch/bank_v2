@@ -8,14 +8,28 @@ import app.utils.DatabaseConnection;
 public class ClientRepository implements ClientInterface {
 
     public void save(Client client) {
-        String sql = "INSERT INTO client (nom, prenom, email, telephone) VALUES (?, ?, ?, ?)";
+        String sql = "INSERT INTO client (nom, prenom, email, telephone, salaire) VALUES (?, ?, ?, ?, ?)";
         try (Connection connection = DatabaseConnection.getConnection();
-             PreparedStatement stmt = connection.prepareStatement(sql)) {
+             PreparedStatement stmt = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             stmt.setString(1, client.getNom());
             stmt.setString(2, client.getPrenom());
             stmt.setString(3, client.getEmail());
             stmt.setString(4, client.getTelephone());
-            stmt.executeUpdate();
+            stmt.setBigDecimal(5, client.getSalaire());
+            
+            int rowsAffected = stmt.executeUpdate();
+            if (rowsAffected == 0) {
+                throw new SQLException("Échec de la création du client, aucune ligne insérée.");
+            }
+            
+            // Récupérer l'ID généré par la base de données
+            try (ResultSet generatedKeys = stmt.getGeneratedKeys()) {
+                if (generatedKeys.next()) {
+                    client.setId(generatedKeys.getLong(1));
+                } else {
+                    throw new SQLException("Échec de la création du client, aucun ID obtenu.");
+                }
+            }
         } catch (SQLException e) {
             throw new RuntimeException("Erreur lors de la sauvegarde du client: " + e.getMessage(), e);
         }
@@ -34,6 +48,7 @@ public class ClientRepository implements ClientInterface {
                     client.setPrenom(rs.getString("prenom"));
                     client.setEmail(rs.getString("email"));
                     client.setTelephone(rs.getString("telephone"));
+                    client.setSalaire(rs.getBigDecimal("salaire"));
                     return client;
                 }
             }
@@ -57,6 +72,7 @@ public class ClientRepository implements ClientInterface {
                 client.setPrenom(rs.getString("prenom"));
                 client.setEmail(rs.getString("email"));
                 client.setTelephone(rs.getString("telephone"));
+                client.setSalaire(rs.getBigDecimal("salaire"));
                 clients.add(client);
             }
         } catch (SQLException e) {
@@ -67,14 +83,15 @@ public class ClientRepository implements ClientInterface {
 
     @Override
     public void update(Long id, Client client) {
-        String sql = "UPDATE client SET nom = ?, prenom = ?, email = ?, telephone = ? WHERE id = ? AND deleted_at IS NULL";
+        String sql = "UPDATE client SET nom = ?, prenom = ?, email = ?, telephone = ?, salaire = ? WHERE id = ? AND deleted_at IS NULL";
         try (Connection connection = DatabaseConnection.getConnection();
              PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setString(1, client.getNom());
             stmt.setString(2, client.getPrenom());
             stmt.setString(3, client.getEmail());
             stmt.setString(4, client.getTelephone());
-            stmt.setLong(5, id);
+            stmt.setBigDecimal(5, client.getSalaire());
+            stmt.setLong(6, id);
             stmt.executeUpdate();
         } catch (SQLException e) {
             throw new RuntimeException("Erreur lors de la mise à jour du client: " + e.getMessage(), e);

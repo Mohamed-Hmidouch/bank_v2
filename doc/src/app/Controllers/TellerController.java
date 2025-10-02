@@ -32,22 +32,24 @@ public class TellerController {
     }
 
     public boolean createClientWithFirstAccount(String nom, String prenom, String email,
-                                               String telephone, String typeCompte, BigDecimal soldeInitial) {
+                                               String telephone, BigDecimal salaire, String typeCompte, BigDecimal soldeInitial) {
         return handleException(() -> {
             if (!validateString(nom) || !validateString(prenom) ||
                 !validateString(email) || !validateString(telephone) ||
-                !validateString(typeCompte) || soldeInitial == null)
+                !validateString(typeCompte) || soldeInitial == null || salaire == null)
                 throw new IllegalArgumentException("Tous les champs sont obligatoires.");
             if (!email.contains("@") || !email.contains("."))
                 throw new IllegalArgumentException("Format email invalide.");
             if (telephone.length() < 10)
                 throw new IllegalArgumentException("Le téléphone doit contenir au moins 10 caractères.");
+            if (salaire.compareTo(BigDecimal.ZERO) < 0)
+                throw new IllegalArgumentException("Le salaire ne peut pas être négatif.");
             String type = typeCompte.trim().toUpperCase();
             if (!type.equals("COURANT") && !type.equals("EPARGNE"))
                 throw new IllegalArgumentException("Type de compte invalide.");
             tellerService.createClientWithFirstAccount(
                 nom.trim(), prenom.trim(), email.trim().toLowerCase(),
-                telephone.trim(), type, soldeInitial
+                telephone.trim(), salaire, type, soldeInitial
             );
         });
     }

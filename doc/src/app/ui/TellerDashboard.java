@@ -75,6 +75,10 @@ public class TellerDashboard {
         String email = scanner.nextLine().trim();
         System.out.print("Téléphone du client: ");
         String telephone = scanner.nextLine().trim();
+        System.out.print("Salaire mensuel du client (€): ");
+        BigDecimal salaire;
+        try { salaire = new BigDecimal(scanner.nextLine().trim()); }
+        catch (NumberFormatException e) { System.out.println("Salaire invalide !"); return; }
     System.out.println("Type de compte : 1 = COURANT, 2 = EPARGNE");
     System.out.print("Votre choix (1/2): ");
     String typeChoice = scanner.nextLine().trim();
@@ -87,11 +91,12 @@ public class TellerDashboard {
         try { soldeInitial = new BigDecimal(scanner.nextLine().trim()); }
         catch (NumberFormatException e) { System.out.println("Montant invalide !"); return; }
 
-        boolean success = tellerController.createClientWithFirstAccount(nom, prenom, email, telephone, typeCompte, soldeInitial);
+        boolean success = tellerController.createClientWithFirstAccount(nom, prenom, email, telephone, salaire, typeCompte, soldeInitial);
         if (success) {
             System.out.println("Client et compte créés avec succès !");
             System.out.println("   Client: " + prenom + " " + nom);
             System.out.println("   Email: " + email);
+            System.out.println("   Salaire: " + salaire + "€/mois");
             System.out.println("   Compte " + typeCompte + " avec solde: " + soldeInitial + "€");
         } else {
             System.out.println("Échec de la création du client ou du compte.");
